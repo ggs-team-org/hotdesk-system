@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────── Auth.js (NextAuth) tables ───────────────────────────
+// Required by @auth/prisma-adapter even with JWT sessions, because the adapter
+// upserts User + Account records on first sign-in.
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+
+  accounts             Account[]
+  sessions             Session[]
+  bookings             Booking[]
+  organizedRoomBookings RoomBooking[]            @relation("RoomBookingOrganizer")
+  attendingRoomBookings RoomBookingAttendee[]
+  coldDesk             Desk?                    @relation("DeskAssignment")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─────────────────────────── Domain ───────────────────────────
+
+model Floor {
+  id      String @id
+  name    String
+  svgPath String
+  width   Int
+  height  Int
+
+  desks Desk[]
+  rooms Room[]
+}
+
+model Desk {
+  id           String  @id
+  label        String
+  floorId      String
+  x            Int
+  y            Int
+  active       Boolean @default(true)
+  type         String  @default("hot") // "hot" | "cold"
+  orientation  String  @default("vertical") // "vertical" | "horizontal"
+  assignedToId String? @unique
+
+  floor      Floor    @relation(fields: [floorId], references: [id])
+  assignedTo User?    @relation("DeskAssignment", fields: [assignedToId], references: [id], onDelete: SetNull)
+  bookings   Booking[]
+
+  @@index([floorId])
+}
+
+model Room {
+  id      String  @id
+  label   String
+  floorId String
+  x       Int
+  y       Int
+  width   Int
+  height  Int
+  active  Boolean @default(true)
+
+  floor    Floor         @relation(fields: [floorId], references: [id])
+  bookings RoomBooking[]
+
+  @@index([floorId])
+}
+
+model Booking {
+  id        String   @id @default(cuid())
+  deskId    String
+  userId    String
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  desk Desk @relation(fields: [deskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([deskId, date])
+  @@index([userId])
+  @@index([date])
+}
+
+model RoomBooking {
+  id          String   @id @default(cuid())
+  roomId      String
+  organizerId String
+  title       String
+  date        DateTime @db.Date
+  wholeDay    Boolean  @default(false)
+  startTime   String // "HH:mm"
+  endTime     String // "HH:mm"
+  createdAt   DateTime @default(now())
+
+  room      Room                  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  organizer User                  @relation("RoomBookingOrganizer", fields: [organizerId], references: [id], onDelete: Cascade)
+  attendees RoomBookingAttendee[]
+
+  @@index([roomId])
+  @@index([organizerId])
+  @@index([date])
+}
+
+model RoomBookingAttendee {
+  bookingId String
+  userId    String
+
+  booking RoomBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([bookingId, userId])
+  @@index([userId])
+}
