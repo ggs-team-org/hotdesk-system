@@ -64,8 +64,7 @@ export function DeskMarker({
             width={horizontal ? 44 : 24}
             height={horizontal ? 24 : 44}
             rx="3"
-            fill="#ffffff"
-            stroke="#9db2e6"
+            className="fill-white stroke-brand-blue-200"
             strokeWidth="1.5"
           />
         </svg>
