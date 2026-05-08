@@ -14,6 +14,7 @@ import {
   cancelDeskBooking as cancelDeskBookingAction,
   cancelRoomBooking as cancelRoomBookingAction,
 } from "@/app/actions/bookings";
+import { runAction } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type Item =
@@ -48,7 +49,6 @@ export function MyBookingsView({
   roomRefs: Record<string, RoomRef>;
 }) {
   const [showPast, setShowPast] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const today = format(new Date(), "yyyy-MM-dd");
@@ -68,17 +68,21 @@ export function MyBookingsView({
   }, [bookings, roomBookings, today]);
 
   function handleCancelDesk(id: string) {
-    startTransition(async () => {
-      const result = await cancelDeskBookingAction(id);
-      if (!result.ok) setError(result.error);
-    });
+    startTransition(() =>
+      runAction(() => cancelDeskBookingAction(id), {
+        loading: "Cancelling desk booking…",
+        success: "Desk booking cancelled",
+      }),
+    );
   }
 
   function handleCancelRoom(id: string) {
-    startTransition(async () => {
-      const result = await cancelRoomBookingAction(id);
-      if (!result.ok) setError(result.error);
-    });
+    startTransition(() =>
+      runAction(() => cancelRoomBookingAction(id), {
+        loading: "Cancelling room booking…",
+        success: "Room booking cancelled",
+      }),
+    );
   }
 
   return (
@@ -92,19 +96,6 @@ export function MyBookingsView({
       <p className="mt-2 text-sm italic text-brand-navy/60">
         Times shown in Europe/Warsaw.
       </p>
-
-      {error && (
-        <div className="mt-3 rounded-md border border-brand-purple/40 bg-brand-purple/10 px-3 py-2 text-xs text-brand-purple">
-          {error}{" "}
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            className="ml-2 font-medium underline"
-          >
-            dismiss
-          </button>
-        </div>
-      )}
 
       {myColdDesks.length > 0 && (
         <section className="mt-8 space-y-3">

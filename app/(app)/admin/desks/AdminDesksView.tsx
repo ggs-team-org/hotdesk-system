@@ -24,6 +24,7 @@ import {
   makeDeskHot as makeDeskHotAction,
   reassignDesk as reassignDeskAction,
 } from "@/app/actions/desks";
+import { runAction } from "@/lib/toast";
 
 export function AdminDesksView({
   desks,
@@ -34,28 +35,35 @@ export function AdminDesksView({
   floorNameById: Record<string, string>;
   userDirectory: Attendee[];
 }) {
-  const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   function floorName(floorId: string) {
     return floorNameById[floorId] ?? "—";
   }
 
-  function call(fn: () => Promise<{ ok: true } | { ok: false; error: string }>) {
-    startTransition(async () => {
-      const result = await fn();
-      if (!result.ok) setError(result.error);
-    });
+  function handleMakeCold(deskId: string, deskLabel: string, owner: Attendee) {
+    startTransition(() =>
+      runAction(() => makeDeskColdAction(deskId, owner.id), {
+        loading: `Assigning ${deskLabel} to ${owner.name}…`,
+        success: `${deskLabel} assigned to ${owner.name}`,
+      }),
+    );
   }
-
-  function handleMakeCold(deskId: string, owner: Attendee) {
-    call(() => makeDeskColdAction(deskId, owner.id));
+  function handleMakeHot(deskId: string, deskLabel: string) {
+    startTransition(() =>
+      runAction(() => makeDeskHotAction(deskId), {
+        loading: `Making ${deskLabel} hot…`,
+        success: `${deskLabel} is now hot`,
+      }),
+    );
   }
-  function handleMakeHot(deskId: string) {
-    call(() => makeDeskHotAction(deskId));
-  }
-  function handleReassign(deskId: string, owner: Attendee) {
-    call(() => reassignDeskAction(deskId, owner.id));
+  function handleReassign(deskId: string, deskLabel: string, owner: Attendee) {
+    startTransition(() =>
+      runAction(() => reassignDeskAction(deskId, owner.id), {
+        loading: `Reassigning ${deskLabel} to ${owner.name}…`,
+        success: `${deskLabel} reassigned to ${owner.name}`,
+      }),
+    );
   }
 
   return (
@@ -68,19 +76,6 @@ export function AdminDesksView({
         </p>
       </div>
 
-      {error && (
-        <div className="mb-3 rounded-md border border-brand-purple/40 bg-brand-purple/10 px-3 py-2 text-xs text-brand-purple">
-          {error}{" "}
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            className="ml-2 font-medium underline"
-          >
-            dismiss
-          </button>
-        </div>
-      )}
-
       {/* Mobile: stacked card list */}
       <div className="space-y-3 sm:hidden">
         {desks.map((d) => (
@@ -89,9 +84,9 @@ export function AdminDesksView({
             desk={d}
             floorName={floorName(d.floorId)}
             userDirectory={userDirectory}
-            onMakeCold={(owner) => handleMakeCold(d.id, owner)}
-            onMakeHot={() => handleMakeHot(d.id)}
-            onReassign={(owner) => handleReassign(d.id, owner)}
+            onMakeCold={(owner) => handleMakeCold(d.id, d.label, owner)}
+            onMakeHot={() => handleMakeHot(d.id, d.label)}
+            onReassign={(owner) => handleReassign(d.id, d.label, owner)}
           />
         ))}
       </div>
@@ -125,9 +120,9 @@ export function AdminDesksView({
                   <RowActions
                     desk={d}
                     userDirectory={userDirectory}
-                    onMakeCold={(owner) => handleMakeCold(d.id, owner)}
-                    onMakeHot={() => handleMakeHot(d.id)}
-                    onReassign={(owner) => handleReassign(d.id, owner)}
+                    onMakeCold={(owner) => handleMakeCold(d.id, d.label, owner)}
+                    onMakeHot={() => handleMakeHot(d.id, d.label)}
+                    onReassign={(owner) => handleReassign(d.id, d.label, owner)}
                   />
                 </AdminTd>
               </AdminTr>

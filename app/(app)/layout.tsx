@@ -1,3 +1,4 @@
+import { Toaster } from "sonner";
 import { Header } from "@/components/layout/Header";
 import { Hexagon } from "@/components/brand/Hexagon";
 
@@ -20,6 +21,16 @@ export default function AppLayout({
       <div className="relative z-10 w-full min-w-0 flex-1 overflow-x-hidden">
         {children}
       </div>
+      <Toaster
+        position="top-center"
+        richColors
+        closeButton
+        toastOptions={{
+          classNames: {
+            toast: "font-sans",
+          },
+        }}
+      />
     </div>
   );
 }

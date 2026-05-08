@@ -26,6 +26,7 @@ import {
   createRoomBooking as createRoomBookingAction,
   updateRoomBooking as updateRoomBookingAction,
 } from "@/app/actions/bookings";
+import { runAction } from "@/lib/toast";
 
 function toIso(date: Date) {
   return format(date, "yyyy-MM-dd");
@@ -52,7 +53,6 @@ export function BookView({
   const [floorId, setFloorId] = useState<string>(floors[0]?.id ?? "");
   const [pendingDesk, setPendingDesk] = useState<Desk | null>(null);
   const [pendingRoom, setPendingRoom] = useState<Room | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const isoDate = toIso(date);
@@ -65,48 +65,64 @@ export function BookView({
     if (!pendingDesk) return;
     const desk = pendingDesk;
     setPendingDesk(null);
-    startTransition(async () => {
-      const result = await createDeskBooking(desk.id, isoDate);
-      if (!result.ok) setError(result.error);
-    });
+    startTransition(() =>
+      runAction(() => createDeskBooking(desk.id, isoDate), {
+        loading: `Booking ${desk.label}…`,
+        success: `Booked ${desk.label}`,
+      }),
+    );
   }
 
   function handleRoomCreate(form: NewRoomBooking) {
     if (!pendingRoom) return;
     const room = pendingRoom;
     setPendingRoom(null);
-    startTransition(async () => {
-      const result = await createRoomBookingAction(room.id, isoDate, {
-        title: form.title,
-        attendeeIds: form.attendees.map((a) => a.id),
-        wholeDay: form.wholeDay,
-        startTime: form.startTime,
-        endTime: form.endTime,
-      });
-      if (!result.ok) setError(result.error);
-    });
+    startTransition(() =>
+      runAction(
+        () =>
+          createRoomBookingAction(room.id, isoDate, {
+            title: form.title,
+            attendeeIds: form.attendees.map((a) => a.id),
+            wholeDay: form.wholeDay,
+            startTime: form.startTime,
+            endTime: form.endTime,
+          }),
+        {
+          loading: `Booking ${room.label}…`,
+          success: `Booked ${room.label}`,
+        },
+      ),
+    );
   }
 
   function handleRoomUpdate(id: string, form: NewRoomBooking) {
     setPendingRoom(null);
-    startTransition(async () => {
-      const result = await updateRoomBookingAction(id, {
-        title: form.title,
-        attendeeIds: form.attendees.map((a) => a.id),
-        wholeDay: form.wholeDay,
-        startTime: form.startTime,
-        endTime: form.endTime,
-      });
-      if (!result.ok) setError(result.error);
-    });
+    startTransition(() =>
+      runAction(
+        () =>
+          updateRoomBookingAction(id, {
+            title: form.title,
+            attendeeIds: form.attendees.map((a) => a.id),
+            wholeDay: form.wholeDay,
+            startTime: form.startTime,
+            endTime: form.endTime,
+          }),
+        {
+          loading: "Saving changes…",
+          success: "Booking updated",
+        },
+      ),
+    );
   }
 
   function handleRoomDelete(id: string) {
     setPendingRoom(null);
-    startTransition(async () => {
-      const result = await cancelRoomBookingAction(id);
-      if (!result.ok) setError(result.error);
-    });
+    startTransition(() =>
+      runAction(() => cancelRoomBookingAction(id), {
+        loading: "Cancelling booking…",
+        success: "Booking cancelled",
+      }),
+    );
   }
 
   if (!floor) {
@@ -164,19 +180,6 @@ export function BookView({
             <Legend swatch="bg-brand-purple/30" label="Whole day" />
           </LegendGroup>
         </div>
-
-        {error && (
-          <div className="mt-3 rounded-md border border-brand-purple/40 bg-brand-purple/10 px-3 py-2 text-xs text-brand-purple">
-            {error}{" "}
-            <button
-              type="button"
-              onClick={() => setError(null)}
-              className="ml-2 font-medium underline"
-            >
-              dismiss
-            </button>
-          </div>
-        )}
 
         <div className="mt-4 w-full min-w-0 max-w-full overflow-x-auto pb-2 sm:mt-6">
           <FloorPlanSvg
