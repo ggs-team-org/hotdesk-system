@@ -22,7 +22,7 @@ export default function AppLayout({
         {children}
       </div>
       <Toaster
-        position="top-center"
+        position="bottom-center"
         richColors
         closeButton
         toastOptions={{
