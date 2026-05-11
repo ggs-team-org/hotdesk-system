@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { format, subYears } from "date-fns";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { displayName } from "@/lib/displayName";
 import type { Booking, Desk, RoomBooking } from "@/lib/mock";
 import { MyBookingsView, type DeskRef, type RoomRef } from "./MyBookingsView";
 
@@ -74,7 +75,7 @@ export default async function MyBookingsPage() {
     id: b.id,
     deskId: b.deskId,
     userId: b.userId,
-    userName: b.user.name ?? b.user.email,
+    userName: displayName(b.user.name, b.user.email),
     date: format(b.date, "yyyy-MM-dd"),
   }));
 
@@ -82,7 +83,7 @@ export default async function MyBookingsPage() {
     id: rb.id,
     roomId: rb.roomId,
     userId: rb.organizerId,
-    userName: rb.organizer.name ?? rb.organizer.email,
+    userName: displayName(rb.organizer.name, rb.organizer.email),
     title: rb.title,
     date: format(rb.date, "yyyy-MM-dd"),
     wholeDay: rb.wholeDay,
@@ -90,7 +91,7 @@ export default async function MyBookingsPage() {
     endTime: rb.endTime,
     attendees: rb.attendees.map((a) => ({
       id: a.user.id,
-      name: a.user.name ?? a.user.email,
+      name: displayName(a.user.name, a.user.email),
     })),
   }));
 
@@ -106,7 +107,7 @@ export default async function MyBookingsPage() {
     assignedTo: d.assignedTo
       ? {
           id: d.assignedTo.id,
-          name: d.assignedTo.name ?? d.assignedTo.email,
+          name: displayName(d.assignedTo.name, d.assignedTo.email),
         }
       : undefined,
   }));

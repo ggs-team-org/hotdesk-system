@@ -50,7 +50,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = (token.userId as string) ?? token.sub ?? "";
+        const id = (token.userId as string | undefined) ?? token.sub;
+        if (!id) throw new Error("Invalid session: missing user id");
+        session.user.id = id;
         session.user.role = (token.role as "admin" | "user") ?? "user";
       }
       return session;

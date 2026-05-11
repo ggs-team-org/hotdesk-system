@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { displayName } from "@/lib/displayName";
 import type { Desk } from "@/lib/mock";
 import { AdminDesksView } from "./AdminDesksView";
 
@@ -38,14 +39,14 @@ export default async function AdminDesksPage() {
     assignedTo: d.assignedTo
       ? {
           id: d.assignedTo.id,
-          name: d.assignedTo.name ?? d.assignedTo.email,
+          name: displayName(d.assignedTo.name, d.assignedTo.email),
         }
       : undefined,
   }));
 
   const userDirectory = usersRaw.map((u) => ({
     id: u.id,
-    name: u.name ?? u.email,
+    name: displayName(u.name, u.email),
   }));
 
   return (

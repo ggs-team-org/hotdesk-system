@@ -3,6 +3,7 @@ import { Logo } from "@/components/brand/Logo";
 import { AccentBlock } from "@/components/brand/AccentBlock";
 import { Hexagon } from "@/components/brand/Hexagon";
 import { auth, signIn } from "@/auth";
+import { safePath } from "@/lib/safePath";
 import { SignInButton } from "./SignInButton";
 
 export default async function LoginPage({
@@ -12,13 +13,14 @@ export default async function LoginPage({
 }) {
   const session = await auth();
   const params = await searchParams;
+  const target = safePath(params.callbackUrl, "/book");
   if (session?.user) {
-    redirect(params.callbackUrl ?? "/book");
+    redirect(target);
   }
 
   async function googleSignIn() {
     "use server";
-    await signIn("google", { redirectTo: params.callbackUrl ?? "/book" });
+    await signIn("google", { redirectTo: target });
   }
 
   return (

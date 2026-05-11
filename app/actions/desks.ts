@@ -47,6 +47,9 @@ export async function makeDeskCold(
     revalidatePath("/my-bookings");
     return { ok: true };
   } catch (e) {
+    if (e instanceof Error && e.message === "UNAUTHENTICATED") {
+      return { ok: false, error: "Please sign in again." };
+    }
     if (e instanceof Error && e.message === "FORBIDDEN") {
       return { ok: false, error: "Admin access required." };
     }
@@ -70,6 +73,9 @@ export async function makeDeskHot(deskId: string): Promise<Result> {
     revalidatePath("/my-bookings");
     return { ok: true };
   } catch (e) {
+    if (e instanceof Error && e.message === "UNAUTHENTICATED") {
+      return { ok: false, error: "Please sign in again." };
+    }
     if (e instanceof Error && e.message === "FORBIDDEN") {
       return { ok: false, error: "Admin access required." };
     }
@@ -105,6 +111,9 @@ export async function reassignDesk(
     revalidatePath("/my-bookings");
     return { ok: true };
   } catch (e) {
+    if (e instanceof Error && e.message === "UNAUTHENTICATED") {
+      return { ok: false, error: "Please sign in again." };
+    }
     if (e instanceof Error && e.message === "FORBIDDEN") {
       return { ok: false, error: "Admin access required." };
     }

@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
 import { initialDesks, floors, rooms } from "@/lib/mock";
 import {
   AdminTable,
@@ -7,7 +9,11 @@ import {
   AdminTr,
 } from "@/components/admin/AdminTable";
 
-export default function AdminFloorsPage() {
+export default async function AdminFloorsPage() {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+  if (session.user.role !== "admin") redirect("/book");
+
   return (
     <section>
       <div className="mb-4 flex items-end justify-between gap-4">

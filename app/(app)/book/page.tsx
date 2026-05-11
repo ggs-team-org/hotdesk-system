@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { addDays, format, startOfDay, subDays } from "date-fns";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { displayName } from "@/lib/displayName";
 import type {
   Booking,
   Desk,
@@ -66,7 +67,7 @@ export default async function BookPage() {
     assignedTo: d.assignedTo
       ? {
           id: d.assignedTo.id,
-          name: d.assignedTo.name ?? d.assignedTo.email,
+          name: displayName(d.assignedTo.name, d.assignedTo.email),
         }
       : undefined,
   }));
@@ -86,7 +87,7 @@ export default async function BookPage() {
     id: b.id,
     deskId: b.deskId,
     userId: b.userId,
-    userName: b.user.name ?? b.user.email,
+    userName: displayName(b.user.name, b.user.email),
     date: format(b.date, "yyyy-MM-dd"),
   }));
 
@@ -94,7 +95,7 @@ export default async function BookPage() {
     id: rb.id,
     roomId: rb.roomId,
     userId: rb.organizerId,
-    userName: rb.organizer.name ?? rb.organizer.email,
+    userName: displayName(rb.organizer.name, rb.organizer.email),
     title: rb.title,
     date: format(rb.date, "yyyy-MM-dd"),
     wholeDay: rb.wholeDay,
@@ -102,18 +103,20 @@ export default async function BookPage() {
     endTime: rb.endTime,
     attendees: rb.attendees.map((a) => ({
       id: a.user.id,
-      name: a.user.name ?? a.user.email,
+      name: displayName(a.user.name, a.user.email),
     })),
   }));
 
   const userDirectory = usersRaw.map((u) => ({
     id: u.id,
-    name: u.name ?? u.email,
+    name: displayName(u.name, u.email),
   }));
   const me = usersRaw.find((u) => u.id === session.user!.id);
   const organizer = {
     id: session.user.id,
-    name: me?.name ?? me?.email ?? session.user.name ?? session.user.email ?? "You",
+    name: me
+      ? displayName(me.name, me.email)
+      : session.user.name ?? "You",
   };
 
   return (
