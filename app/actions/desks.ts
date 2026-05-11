@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { startOfDay } from "date-fns";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -32,9 +33,11 @@ export async function makeDeskCold(
       data: { type: "hot", assignedToId: null },
     });
 
-    // Cancel any pending bookings for this desk on or after today
+    // Cancel any pending bookings for this desk on or after today.
+    // The booking.date column is @db.Date — comparing to `new Date()` (with
+    // a time-of-day) would skip today's bookings after midnight.
     await prisma.booking.deleteMany({
-      where: { deskId, date: { gte: new Date() } },
+      where: { deskId, date: { gte: startOfDay(new Date()) } },
     });
 
     await prisma.desk.update({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Plus, Trash2, X } from "lucide-react";
 import type { Attendee, Room, RoomBooking } from "@/lib/mock";
@@ -49,18 +49,7 @@ export type NewRoomBooking = {
   endTime: string;
 };
 
-export function RoomBookingModal({
-  room,
-  date,
-  existingBookings,
-  open,
-  organizer,
-  userDirectory,
-  onOpenChange,
-  onCreate,
-  onUpdate,
-  onDelete,
-}: {
+type RoomBookingModalProps = {
   room: Room | null;
   date: string;
   existingBookings: RoomBooking[];
@@ -71,7 +60,32 @@ export function RoomBookingModal({
   onCreate: (booking: NewRoomBooking) => void;
   onUpdate: (id: string, booking: NewRoomBooking) => void;
   onDelete: (id: string) => void;
-}) {
+};
+
+export function RoomBookingModal(props: RoomBookingModalProps) {
+  return (
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        {/* Radix unmounts DialogContent's children on close, and the key
+            forces a remount when the room changes while open — both give
+            us fresh form state for free, no effect needed. */}
+        <RoomBookingForm key={props.room?.id ?? "none"} {...props} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RoomBookingForm({
+  room,
+  date,
+  existingBookings,
+  organizer,
+  userDirectory,
+  onOpenChange,
+  onCreate,
+  onUpdate,
+  onDelete,
+}: RoomBookingModalProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [attendees, setAttendees] = useState<Attendee[]>([organizer]);
@@ -97,11 +111,6 @@ export function RoomBookingModal({
     setStartTime(b.startTime);
     setEndTime(b.endTime);
   }
-
-  useEffect(() => {
-    if (open) resetToCreate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, room?.id]);
 
   const formattedDate = format(parseISO(date), "EEEE d MMMM yyyy");
   const validRange = wholeDay || endTime > startTime;
@@ -141,170 +150,168 @@ export function RoomBookingModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
-        <DialogHeader>
-          <DialogTitle className="text-brand-navy">
-            {editing ? "Edit booking" : "Book"} · {room?.label}
-          </DialogTitle>
-          <DialogDescription>{formattedDate}</DialogDescription>
-        </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle className="text-brand-navy">
+          {editing ? "Edit booking" : "Book"} · {room?.label}
+        </DialogTitle>
+        <DialogDescription>{formattedDate}</DialogDescription>
+      </DialogHeader>
 
-        <div className="grid gap-4 sm:grid-cols-[200px_1fr] sm:gap-6">
-          <DaySchedule
-            existing={existingBookings}
-            preview={
-              wholeDay
-                ? { startTime: "08:00", endTime: "18:00", title: title || "New booking" }
-                : { startTime, endTime, title: title || "New booking" }
-            }
-            previewValid={valid && !editing}
-            previewEditingId={editingId}
-            onSelect={loadFromBooking}
-          />
+      <div className="grid gap-4 sm:grid-cols-[200px_1fr] sm:gap-6">
+        <DaySchedule
+          existing={existingBookings}
+          preview={
+            wholeDay
+              ? { startTime: "08:00", endTime: "18:00", title: title || "New booking" }
+              : { startTime, endTime, title: title || "New booking" }
+          }
+          previewValid={valid && !editing}
+          previewEditingId={editingId}
+          onSelect={loadFromBooking}
+        />
 
-          <div className="space-y-3 sm:space-y-5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wide text-brand-navy/60">
-                {editing ? "Editing existing" : "New booking"}
-              </span>
-              {editing && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={resetToCreate}
-                  className="h-7 gap-1 border-brand-blue-200 text-xs text-brand-navy/80"
-                >
-                  <Plus className="h-3 w-3" />
-                  New booking
-                </Button>
-              )}
-            </div>
+        <div className="space-y-3 sm:space-y-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium uppercase tracking-wide text-brand-navy/60">
+              {editing ? "Editing existing" : "New booking"}
+            </span>
+            {editing && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={resetToCreate}
+                className="h-7 gap-1 border-brand-blue-200 text-xs text-brand-navy/80"
+              >
+                <Plus className="h-3 w-3" />
+                New booking
+              </Button>
+            )}
+          </div>
 
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium uppercase tracking-wide text-brand-navy/60">
-                Title
-              </label>
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium uppercase tracking-wide text-brand-navy/60">
+              Title
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Sprint planning"
+              className="w-full rounded-md border border-brand-blue-200 bg-white px-3 py-2 text-sm text-brand-navy shadow-sm placeholder:text-brand-navy/40 focus:border-brand-purple focus:outline-none focus:ring-2 focus:ring-brand-purple/30"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-medium uppercase tracking-wide text-brand-navy/60">
+              When
+            </label>
+            <label className="flex items-center gap-2 text-sm text-brand-navy">
               <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Sprint planning"
-                className="w-full rounded-md border border-brand-blue-200 bg-white px-3 py-2 text-sm text-brand-navy shadow-sm placeholder:text-brand-navy/40 focus:border-brand-purple focus:outline-none focus:ring-2 focus:ring-brand-purple/30"
+                type="checkbox"
+                checked={wholeDay}
+                onChange={(e) => setWholeDay(e.target.checked)}
+                className="h-4 w-4 cursor-pointer accent-brand-purple"
               />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-medium uppercase tracking-wide text-brand-navy/60">
-                When
-              </label>
-              <label className="flex items-center gap-2 text-sm text-brand-navy">
-                <input
-                  type="checkbox"
-                  checked={wholeDay}
-                  onChange={(e) => setWholeDay(e.target.checked)}
-                  className="h-4 w-4 cursor-pointer accent-brand-purple"
-                />
-                Book for the whole day
-              </label>
-              {!wholeDay && (
-                <div className="grid grid-cols-2 gap-3">
-                  <TimeField label="Start" value={startTime} onChange={setStartTime} />
-                  <TimeField label="End" value={endTime} onChange={setEndTime} />
-                </div>
-              )}
-              {!wholeDay && !validRange && (
-                <p className="text-xs text-brand-purple">
-                  End time must be after start time.
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-xs font-medium uppercase tracking-wide text-brand-navy/60">
-                Attendees
-              </label>
-              <div className="flex flex-wrap items-center gap-2">
-                {attendees.map((a) => (
-                  <AttendeeChip
-                    key={a.id}
-                    attendee={a}
-                    isOrganizer={a.id === organizer.id}
-                    onRemove={() => removeAttendee(a.id)}
-                  />
-                ))}
-                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={availableUsers.length === 0}
-                      className="h-8 gap-1 border-dashed border-brand-blue-200 text-brand-navy/80 hover:border-brand-purple hover:text-brand-purple"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Add
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-56 p-1" align="start">
-                    {availableUsers.length === 0 ? (
-                      <div className="px-2 py-1.5 text-xs italic text-brand-navy/60">
-                        Everyone added.
-                      </div>
-                    ) : (
-                      <ul className="max-h-56 overflow-y-auto">
-                        {availableUsers.map((u) => (
-                          <li key={u.id}>
-                            <button
-                              type="button"
-                              onClick={() => addAttendee(u)}
-                              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-brand-navy hover:bg-brand-mist"
-                            >
-                              <span className="grid h-6 w-6 place-items-center rounded-full bg-brand-lilac text-[10px] font-bold text-brand-navy">
-                                {initials(u.name)}
-                              </span>
-                              {u.name}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </PopoverContent>
-                </Popover>
+              Book for the whole day
+            </label>
+            {!wholeDay && (
+              <div className="grid grid-cols-2 gap-3">
+                <TimeField label="Start" value={startTime} onChange={setStartTime} />
+                <TimeField label="End" value={endTime} onChange={setEndTime} />
               </div>
+            )}
+            {!wholeDay && !validRange && (
+              <p className="text-xs text-brand-purple">
+                End time must be after start time.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-medium uppercase tracking-wide text-brand-navy/60">
+              Attendees
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              {attendees.map((a) => (
+                <AttendeeChip
+                  key={a.id}
+                  attendee={a}
+                  isOrganizer={a.id === organizer.id}
+                  onRemove={() => removeAttendee(a.id)}
+                />
+              ))}
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={availableUsers.length === 0}
+                    className="h-8 gap-1 border-dashed border-brand-blue-200 text-brand-navy/80 hover:border-brand-purple hover:text-brand-purple"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-1" align="start">
+                  {availableUsers.length === 0 ? (
+                    <div className="px-2 py-1.5 text-xs italic text-brand-navy/60">
+                      Everyone added.
+                    </div>
+                  ) : (
+                    <ul className="max-h-56 overflow-y-auto">
+                      {availableUsers.map((u) => (
+                        <li key={u.id}>
+                          <button
+                            type="button"
+                            onClick={() => addAttendee(u)}
+                            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-brand-navy hover:bg-brand-mist"
+                          >
+                            <span className="grid h-6 w-6 place-items-center rounded-full bg-brand-lilac text-[10px] font-bold text-brand-navy">
+                              {initials(u.name)}
+                            </span>
+                            {u.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </div>
+      </div>
 
-        <DialogFooter className="items-center gap-2 sm:gap-2">
-          {editing && (
-            <Button
-              variant="outline"
-              onClick={handleDelete}
-              className="mr-auto gap-1.5 border-brand-purple/40 text-brand-purple hover:bg-brand-purple/10 hover:text-brand-purple"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </Button>
-          )}
+      <DialogFooter className="items-center gap-2 sm:gap-2">
+        {editing && (
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="border-brand-blue-200"
+            onClick={handleDelete}
+            className="mr-auto gap-1.5 border-brand-purple/40 text-brand-purple hover:bg-brand-purple/10 hover:text-brand-purple"
           >
-            Cancel
+            <Trash2 className="h-4 w-4" />
+            Delete
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!valid}
-            className="bg-brand-purple text-white hover:bg-brand-purple/90"
-          >
-            {editing ? "Save changes" : "Confirm"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        )}
+        <Button
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+          className="border-brand-blue-200"
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={!valid}
+          className="bg-brand-purple text-white hover:bg-brand-purple/90"
+        >
+          {editing ? "Save changes" : "Confirm"}
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
 
