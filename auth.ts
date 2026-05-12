@@ -3,6 +3,8 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 
+const ALLOWED_DOMAIN = "ggsitc.com";
+
 const adminEmails = (process.env.ADMIN_EMAILS ?? "")
   .split(",")
   .map((s) => s.trim().toLowerCase())
@@ -27,12 +29,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      // UX hint: Google's account picker pre-filters to ggsitc.com accounts.
+      // Not enforcement — that lives in the signIn callback below.
+      authorization: { params: { hd: ALLOWED_DOMAIN } },
     }),
   ],
   pages: {
     signIn: "/login",
   },
   callbacks: {
+    async signIn({ profile }) {
+      // Server-side enforcement: only ggsitc.com Google accounts can sign in.
+      // `hd` on the profile is set for Workspace accounts; email-suffix is the
+      // fallback for personal accounts that somehow get through.
+      const email = profile?.email?.toLowerCase();
+      const hd = (profile as { hd?: string } | undefined)?.hd?.toLowerCase();
+      const emailVerified = (profile as { email_verified?: boolean } | undefined)
+        ?.email_verified;
+      if (emailVerified === false) return false;
+      if (hd === ALLOWED_DOMAIN) return true;
+      return !!email && email.endsWith(`@${ALLOWED_DOMAIN}`);
+    },
     async jwt({ token, user }) {
       if (user?.id) token.userId = user.id;
       if (user?.email) {
